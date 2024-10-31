@@ -32,11 +32,11 @@ function App() {
   const handleOnScroll = (event) => {
     const { scrollTop, scrollHeight, clientHeight } = event.target;
     if (Math.ceil(scrollTop) + clientHeight >= scrollHeight - 50 && hasMore && !loading) {
-      loadMoreData(page, orderBy, order);
+      loadMoreData(page, orderBy, order, data);
     }
   };
 
-  const loadMoreData = (page, orderBy, order) => {
+  const loadMoreData = (page, orderBy, order, previousData) => {
     if (!loading) {
       setLoading(true);
       axios
@@ -50,11 +50,7 @@ function App() {
         })
         .then((response) => {
           if (response.data.length > 0) {
-            const actualData = [...data, ...response.data];
-            const uniqueData = actualData.filter((item, index, arr) => {
-              return index === arr.findIndex(ele => item.id === ele.id);
-            })
-            setData(actualData);
+            setData(previousData.concat(response.data));
             setPage((prevPage) => prevPage + 1); // Increment the page
           } else {
             setHasMore(false); // No more data to load
@@ -70,16 +66,17 @@ function App() {
   };
 
   const handleSort = (property) => {
+    setData([]); // Clear current data on sort
+    setHasMore(true);
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
     setPage(0); // Reset to first page on sort
-    setData([]); // Clear current data on sort
-    loadMoreData(0, property, isAsc ? 'desc' : 'asc'); // Load sorted data
+    loadMoreData(0, property, isAsc ? 'desc' : 'asc', []); // Load sorted data
   };
 
   useEffect(() => {
-    loadMoreData(0, "id", 'asc'); // Load initial data
+    loadMoreData(0, "id", 'asc', []); // Load initial data
   }, []);
 
   return (
@@ -94,6 +91,7 @@ function App() {
                     {columns.map((column) => (
                       <TableCell key={column.id}>
                         <TableSortLabel
+                          key={column.id}
                           active={orderBy === column.id}
                           direction={orderBy === column.id ? order : 'asc'}
                           onClick={() => handleSort(column.id)}
@@ -105,8 +103,8 @@ function App() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data.map((row) => (
-                    <TableRow key={row.id}>
+                  {data.map((row, index) => (
+                    <TableRow key={index}>
                       <TableCell>{row.id}</TableCell>
                       <TableCell>{row.name}</TableCell>
                       <TableCell>{row.cost}</TableCell>
